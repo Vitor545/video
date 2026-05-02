@@ -23,7 +23,12 @@ def _get_s3_client():
         region_name=settings.s3_region,
         config=Config(
             signature_version="s3v4",
-            s3={"addressing_style": "path"},
+            s3={
+                "addressing_style": "path",
+                "payload_signing_enabled": False,
+            },
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
             retries={"max_attempts": 3, "mode": "standard"},
         ),
     )
