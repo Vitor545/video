@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider, useAuth } from "@/contexts/auth"
 import Login from "./pages/Login"
-import Register from "./pages/Register"
 import Dashboard from "./pages/Dashboard"
 import Course from "./pages/Course"
 import Courses from "./pages/Courses"
@@ -26,7 +25,6 @@ export function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
           <Route path="/course/:id" element={<ProtectedRoute><Course /></ProtectedRoute>} />
