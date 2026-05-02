@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.infrastructure.repositories import VideoRepository, DownloadJobRepository, CourseRepository
 from app.infrastructure.storage import delete as storage_delete
-from app.application.downloads import queue_download, get_queue_status
+from app.application.downloads import queue_download, get_queue_status, cancel_job, cancel_all
+from app.database import AsyncSessionLocal
 
 router = APIRouter(prefix="/downloads", tags=["downloads"])
 
@@ -39,9 +40,23 @@ async def retry_job(job_id: int, db: AsyncSession = Depends(get_db)):
     job = await job_repo.get(job_id)
     if not job:
         raise HTTPException(404, "Job não encontrado")
-    
+
     await queue_download(job_id)
     return {"status": "retrying", "job_id": job_id}
+
+
+@router.delete("/jobs/{job_id}", status_code=200)
+async def cancel_one(job_id: int):
+    cancelled = await cancel_job(job_id, AsyncSessionLocal)
+    if not cancelled:
+        raise HTTPException(404, "Job não encontrado")
+    return {"status": "cancelled", "job_id": job_id}
+
+
+@router.post("/cancel-all", status_code=200)
+async def cancel_all_jobs():
+    count = await cancel_all(AsyncSessionLocal)
+    return {"status": "ok", "cancelled_count": count}
 
 
 @router.get("/status")

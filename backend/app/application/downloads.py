@@ -20,6 +20,8 @@ MAX_CONCURRENT_DOWNLOADS = 2
 _semaphore = asyncio.Semaphore(MAX_CONCURRENT_DOWNLOADS)
 _queue: asyncio.Queue[int] = asyncio.Queue()
 _active_downloads: dict[int, dict] = {}  # { job_id: { progress_bytes, total_bytes } }
+_active_tasks: dict[int, asyncio.Task] = {}  # { job_id: Task } — para poder cancelar
+_queued_ids: set[int] = set()  # job_ids enfileirados (pra cancelar antes de iniciar)
 
 async def _probe_duration_seconds(input_path: Path) -> int | None:
     try:
@@ -143,15 +145,110 @@ async def get_queue_status() -> dict:
     }
 
 async def queue_download(job_id: int):
+    _queued_ids.add(job_id)
     await _queue.put(job_id)
 
+
+def _cleanup_temp_files_for_video(video_id: int | None) -> None:
+    """Remove arquivos parciais em temp_downloads/ que correspondam ao vídeo cancelado."""
+    if video_id is None:
+        return
+    temp_dir = Path("temp_downloads")
+    if not temp_dir.exists():
+        return
+    pattern_prefix = f"{video_id}."
+    for p in temp_dir.iterdir():
+        if not p.is_file():
+            continue
+        if p.name.startswith(pattern_prefix) or f"_{video_id}." in p.name:
+            try:
+                p.unlink()
+                logger.info("Removido arquivo parcial: %s", p)
+            except OSError:
+                pass
+
+
+async def cancel_job(job_id: int, db_factory: Callable) -> bool:
+    """Cancela um job — em andamento, enfileirado ou pending no DB.
+
+    Retorna True se algo foi feito. Cancela a task asyncio (se ativa),
+    remove arquivos parciais e apaga o job do DB.
+    """
+    cancelled_something = False
+    video_id: int | None = None
+
+    async with db_factory() as db:
+        job_repo = DownloadJobRepository(db)
+        job = await job_repo.get(job_id)
+        if job:
+            video_id = job.video_id
+
+    task = _active_tasks.pop(job_id, None)
+    if task and not task.done():
+        task.cancel()
+        try:
+            await asyncio.wait_for(task, timeout=10)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
+        cancelled_something = True
+
+    _queued_ids.discard(job_id)
+    _active_downloads.pop(job_id, None)
+    _cleanup_temp_files_for_video(video_id)
+
+    async with db_factory() as db:
+        job_repo = DownloadJobRepository(db)
+        job = await job_repo.get(job_id)
+        if job:
+            await db.delete(job)
+            await db.commit()
+            cancelled_something = True
+
+    return cancelled_something
+
+
+async def cancel_all(db_factory: Callable) -> int:
+    """Cancela TODOS os jobs em andamento, enfileirados e pendentes."""
+    job_ids = set(_active_tasks.keys()) | set(_queued_ids)
+
+    async with db_factory() as db:
+        job_repo = DownloadJobRepository(db)
+        pending = await job_repo.list_pending_and_retry()
+        job_ids.update(j.id for j in pending)
+        # Inclui também os DOWNLOADING que possam estar fora do _active_tasks
+        # (ex.: backend reiniciado). Lista tudo que não é done/failed.
+        all_jobs = await job_repo.list_all_with_videos()
+        for j in all_jobs:
+            if j.status in (DownloadStatus.PENDING, DownloadStatus.DOWNLOADING, DownloadStatus.RETRY_PENDING):
+                job_ids.add(j.id)
+
+    cancelled = 0
+    for jid in job_ids:
+        try:
+            if await cancel_job(jid, db_factory):
+                cancelled += 1
+        except Exception as e:
+            logger.warning("Falha ao cancelar job %s: %s", jid, e)
+
+    # Drena qualquer resto da fila
+    while not _queue.empty():
+        try:
+            _queue.get_nowait()
+            _queue.task_done()
+        except asyncio.QueueEmpty:
+            break
+    _queued_ids.clear()
+
+    return cancelled
+
 async def process_job(job_id: int, db_factory: Callable):
+    _queued_ids.discard(job_id)
     async with _semaphore:
         async with db_factory() as db:
             job_repo = DownloadJobRepository(db)
             video_repo = VideoRepository(db)
             job = await job_repo.get(job_id)
-            
+
             if not job or job.status == DownloadStatus.DONE:
                 return
 
@@ -253,6 +350,11 @@ async def process_job(job_id: int, db_factory: Callable):
                         except OSError:
                             pass
 
+            except asyncio.CancelledError:
+                logger.info(f"[job={job_id}] Cancelado pelo usuário")
+                _cleanup_temp_files_for_video(video.id if video else None)
+                raise
+
             except Exception as e:
                 logger.error(f"[job={job_id}] Failed: {e}")
                 # Increment attempts and set for retry
@@ -275,7 +377,9 @@ async def download_worker(db_factory: Callable):
     while True:
         try:
             job_id = await _queue.get()
-            asyncio.create_task(process_job(job_id, db_factory))
+            task = asyncio.create_task(process_job(job_id, db_factory))
+            _active_tasks[job_id] = task
+            task.add_done_callback(lambda t, jid=job_id: _active_tasks.pop(jid, None))
             _queue.task_done()
         except Exception as e:
             logger.error(f"Error in download worker loop: {e}")

@@ -54,6 +54,29 @@ export function DownloadQueue({ refreshToken }: { refreshToken?: number }) {
     }
   }
 
+  const handleCancel = async (jobId: number) => {
+    try {
+      await downloadsService.cancelJob(jobId)
+      toast({ title: "Download cancelado" })
+      fetchStatus()
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Erro desconhecido"
+      toast({ title: "Erro ao cancelar", description: msg, variant: "destructive" })
+    }
+  }
+
+  const handleCancelAll = async () => {
+    if (!confirm("Cancelar TODOS os downloads em andamento e na fila?")) return
+    try {
+      const res = await downloadsService.cancelAll()
+      toast({ title: `${res.cancelled_count} download(s) cancelado(s)` })
+      fetchStatus()
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Erro desconhecido"
+      toast({ title: "Erro ao cancelar tudo", description: msg, variant: "destructive" })
+    }
+  }
+
   if (loading && !data) {
     return (
       <Card>
@@ -152,6 +175,8 @@ export function DownloadQueue({ refreshToken }: { refreshToken?: number }) {
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => handleCancel(job.id)}
+              title="Cancelar download"
             >
               <X size={14} />
             </Button>
@@ -164,12 +189,25 @@ export function DownloadQueue({ refreshToken }: { refreshToken?: number }) {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Em andamento</CardTitle>
-          <CardDescription>
-            {inFlightJobs.length} {inFlightJobs.length === 1 ? "item" : "itens"} na fila
-            {activeCount > 0 && ` · ${activeCount} baixando agora`}
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-2">
+          <div>
+            <CardTitle>Em andamento</CardTitle>
+            <CardDescription>
+              {inFlightJobs.length} {inFlightJobs.length === 1 ? "item" : "itens"} na fila
+              {activeCount > 0 && ` · ${activeCount} baixando agora`}
+            </CardDescription>
+          </div>
+          {inFlightJobs.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelAll}
+              className="text-destructive hover:text-destructive shrink-0"
+            >
+              <X size={14} className="mr-1" />
+              Cancelar todos
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-3">
           {inFlightJobs.length === 0 ? (

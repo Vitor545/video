@@ -29,6 +29,8 @@ export interface StatusResponse {
 export const downloadsService = {
   enqueueBatch: (videoIds: number[]) => api.post<{ queued_count: number }>("/downloads/batch", { video_ids: videoIds }),
   retryJob: (jobId: number) => api.post(`/downloads/jobs/${jobId}/retry`),
+  cancelJob: (jobId: number) => api.delete<{ status: string; job_id: number }>(`/downloads/jobs/${jobId}`),
+  cancelAll: () => api.post<{ status: string; cancelled_count: number }>("/downloads/cancel-all"),
   status: () => api.get<StatusResponse>("/downloads/status"),
   deleteVideoStorage: (videoId: number) => api.delete(`/downloads/videos/${videoId}/storage`),
   deleteCourseStorage: (courseId: number) => api.delete(`/downloads/courses/${courseId}/storage`),
