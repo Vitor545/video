@@ -237,9 +237,30 @@ async def download_video(
 
     dest_path = dest_dir / f"{msg_id}{ext}"
 
+    total_size = 0
     try:
-        await client.download_media(msg, file=str(dest_path), progress_callback=progress_callback)
+        if msg.media is not None and hasattr(msg.media, "document") and msg.media.document is not None:
+            total_size = int(getattr(msg.media.document, "size", 0) or 0)
+    except Exception:
+        total_size = 0
+
+    # Chunks de 512KB (8x o padrão de 64KB do Telethon). request_size precisa
+    # ser múltiplo de 4096 e divisor de 1MB; 524288 é o teto seguro.
+    CHUNK = 512 * 1024
+    downloaded = 0
+    try:
+        with open(dest_path, "wb") as f:
+            async for chunk in client.iter_download(msg, request_size=CHUNK):
+                f.write(chunk)
+                downloaded += len(chunk)
+                if progress_callback:
+                    progress_callback(downloaded, total_size)
     except Exception as e:
+        try:
+            if dest_path.exists():
+                dest_path.unlink()
+        except OSError:
+            pass
         error_str = str(e).lower()
         if "flood" in error_str or "floodwait" in error_str:
             raise RuntimeError(f"TelegramFloodError: {e}") from e
