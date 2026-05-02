@@ -13,7 +13,6 @@ spec:
   resources:
     requests:
       storage: {{ .Values.backend.telegramSession.size }}
-{{- if .Values.backend.localStorage.enabled }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -30,4 +29,3 @@ spec:
   resources:
     requests:
       storage: {{ .Values.backend.localStorage.size }}
-{{- end }}

@@ -1,6 +1,6 @@
-import { Wifi, Database, HardDrive } from "lucide-react"
+import { Wifi, Database } from "lucide-react"
 
-export const SYSTEM_SERVICE_ICON_MAP = { Wifi, Database, HardDrive }
+export const SYSTEM_SERVICE_ICON_MAP = { Wifi, Database }
 
 export const INTEGRATIONS = [
   { id: 1, platform: "Telegram", name: "DevOps Pro 2", type: "Canal", status: "active" },
@@ -8,9 +8,8 @@ export const INTEGRATIONS = [
 ]
 
 export const SYSTEM_SERVICES = [
-  { label: "Telegram API", status: "Online",  color: "text-green-400", bg: "bg-green-400/10", icon: "Wifi" },
-  { label: "PostgreSQL",   status: "Online",  color: "text-green-400", bg: "bg-green-400/10", icon: "Database" },
-  { label: "SeaweedFS",    status: "Offline", color: "text-red-400",   bg: "bg-red-400/10",   icon: "HardDrive" },
+  { label: "Telegram API", status: "Online", color: "text-green-400", bg: "bg-green-400/10", icon: "Wifi" },
+  { label: "PostgreSQL",   status: "Online", color: "text-green-400", bg: "bg-green-400/10", icon: "Database" },
 ] as const
 
 export const STORAGE_USED_PERCENT = 23.6

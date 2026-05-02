@@ -16,5 +16,3 @@ openai>=1.40.0
 jsonschema>=4.23.0
 # M2 — Telegram via Telethon
 telethon>=1.36.0
-# M3 — S3 / SeaweedFS
-boto3>=1.35.0

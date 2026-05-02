@@ -53,10 +53,8 @@ spec:
           volumeMounts:
             - name: telegram-data
               mountPath: /app/telegram_data
-            {{- if .Values.backend.localStorage.enabled }}
             - name: storage
               mountPath: /app/storage
-            {{- end }}
           livenessProbe:
             httpGet:
               path: /health
@@ -77,11 +75,9 @@ spec:
         - name: telegram-data
           persistentVolumeClaim:
             claimName: video-telegram-data
-        {{- if .Values.backend.localStorage.enabled }}
         - name: storage
           persistentVolumeClaim:
             claimName: video-local-storage
-        {{- end }}
 ---
 apiVersion: v1
 kind: Service

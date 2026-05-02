@@ -28,7 +28,6 @@ export interface IntegrationIn {
 
 export interface SystemHealth {
   postgres: boolean
-  seaweed: boolean
   storage_used_gb: number
   storage_total_gb: number
 }

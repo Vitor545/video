@@ -41,19 +41,12 @@ export function SystemStatus() {
   }
 
   const services = [
-    { 
-      label: "PostgreSQL", 
-      status: health?.postgres ? "Online" : "Offline", 
-      color: health?.postgres ? "text-green-400" : "text-red-400", 
-      bg: health?.postgres ? "bg-green-400/10" : "bg-red-400/10", 
-      icon: "Database" 
-    },
-    { 
-      label: "SeaweedFS", 
-      status: health?.seaweed ? "Online" : "Offline", 
-      color: health?.seaweed ? "text-green-400" : "text-red-400", 
-      bg: health?.seaweed ? "bg-green-400/10" : "bg-red-400/10", 
-      icon: "HardDrive" 
+    {
+      label: "PostgreSQL",
+      status: health?.postgres ? "Online" : "Offline",
+      color: health?.postgres ? "text-green-400" : "text-red-400",
+      bg: health?.postgres ? "bg-green-400/10" : "bg-red-400/10",
+      icon: "Database"
     },
   ]
 

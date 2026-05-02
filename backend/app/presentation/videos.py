@@ -1,11 +1,14 @@
 """
-Videos router — streaming via presigned URL S3 + tracking de progresso.
+Videos router — streaming local com Range + tracking de progresso.
 
 Endpoints:
-  GET  /videos/{id}/stream    → 302 redirect para URL presigned (1h TTL)
-  GET  /videos/{id}/stream-local → stream do arquivo local (Range)
-  GET  /videos/{id}/progress  → progresso atual do usuário neste vídeo
-  POST /videos/{id}/progress  → salva progresso (auto-save do player)
+  GET  /videos/{id}/stream-url    → URL com token HMAC para o player
+  GET  /videos/{id}/stream-local  → stream do arquivo local (Range)
+  GET  /videos/{id}/download-url  → URL com token HMAC para download
+  GET  /videos/{id}/download-local→ download local
+  GET  /videos/{id}/stream        → redirect autenticado para o stream
+  GET  /videos/{id}/progress      → progresso atual do usuário neste vídeo
+  POST /videos/{id}/progress      → salva progresso (auto-save do player)
 """
 import base64
 import hashlib
@@ -26,7 +29,6 @@ from app.config import settings
 from app.database import get_db
 from app.domain.entities import DownloadStatus
 from app.infrastructure.repositories import VideoRepository
-from app.infrastructure.storage import presigned_url
 from app.presentation.auth import get_current_user_id
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -149,9 +151,8 @@ async def get_stream_url(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Devolve uma URL presigned do S3 com TTL de 1h. Usada pelo `<video src>`
-    do frontend — não dá pra passar header Authorization na tag `<video>`,
-    então a autenticação acontece aqui e a URL retornada já está assinada.
+    Devolve uma URL com token HMAC (TTL 1h) que o `<video src>` do frontend
+    consome — a tag não aceita header Authorization, então o token vai na URL.
     """
     video = await VideoRepository(db).get_by_id(video_id)
     if video is None:
@@ -164,13 +165,11 @@ async def get_stream_url(
         raise HTTPException(409, "Este item não é um vídeo")
 
     expires = 3600
-    if (settings.storage_backend or "s3").lower() == "local":
-        token = _make_stream_token(video_id, expires)
-        return StreamUrlOut(
-            url=f"/api/videos/{video_id}/stream-local?token={token}",
-            expires_in=expires,
-        )
-    return StreamUrlOut(url=presigned_url(video.storage_path, expires=expires), expires_in=expires)
+    token = _make_stream_token(video_id, expires)
+    return StreamUrlOut(
+        url=f"/api/videos/{video_id}/stream-local?token={token}",
+        expires_in=expires,
+    )
 
 
 @router.get("/{video_id}/stream-local")
@@ -217,32 +216,9 @@ async def get_download_url(
         raise HTTPException(409, "Item ainda não foi baixado")
 
     expires = 3600
-    inferred_ext = None
-    if getattr(video, "storage_path", None):
-        inferred_ext = Path(str(video.storage_path)).suffix or None
-    ext = getattr(video, "file_ext", None) or inferred_ext or ""
-    filename = getattr(video, "original_filename", None) or f"{video_id}{ext}"
-
-    content_type = getattr(video, "mime_type", None)
-    if not content_type and filename:
-        content_type = mimetypes.guess_type(filename)[0]
-    content_type = content_type or "application/octet-stream"
-    disposition = f'attachment; filename="{filename}"'
-
-    if (settings.storage_backend or "s3").lower() == "local":
-        token = _make_stream_token(video_id, expires)
-        return DownloadUrlOut(
-            url=f"/api/videos/{video_id}/download-local?token={token}",
-            expires_in=expires,
-        )
-
+    token = _make_stream_token(video_id, expires)
     return DownloadUrlOut(
-        url=presigned_url(
-            video.storage_path,
-            expires=expires,
-            response_content_type=content_type,
-            response_content_disposition=disposition,
-        ),
+        url=f"/api/videos/{video_id}/download-local?token={token}",
         expires_in=expires,
     )
 
@@ -287,8 +263,8 @@ async def stream_video(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Redirect 302 para a URL presigned. Mantido para acesso direto autenticado
-    (curl, ferramentas externas). O frontend usa /stream-url no lugar.
+    Redirect 302 para o stream local com token. Mantido para acesso direto
+    autenticado (curl, ferramentas externas). O frontend usa /stream-url.
     """
     video = await VideoRepository(db).get_by_id(video_id)
     if video is None:
@@ -300,8 +276,8 @@ async def stream_video(
     if (getattr(video, "media_type", "video") or "video").lower() != "video":
         raise HTTPException(409, "Este item não é um vídeo")
 
-    url = presigned_url(video.storage_path, expires=3600)
-    return RedirectResponse(url, status_code=302)
+    token = _make_stream_token(video_id, 3600)
+    return RedirectResponse(f"/api/videos/{video_id}/stream-local?token={token}", status_code=302)
 
 
 @router.get("/{video_id}/progress", response_model=ProgressOut)

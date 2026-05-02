@@ -8,13 +8,6 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
 
-    # SeaweedFS / S3 (M3)
-    s3_endpoint: str = "https://seaweedfs.vitorsouzadasilva.tech"
-    s3_region: str = "us-east-1"
-    s3_access_key: str = "vitor"
-    s3_secret_key: str = ""
-    s3_bucket: str = "private"
-
     # Telegram / IA (M2)
     openai_api_key: str = ""
     telegram_session_path: str = "/app/telegram_data/session"
@@ -22,8 +15,7 @@ class Settings(BaseSettings):
     telegram_api_hash: str = ""
     telegram_phone: str = ""
 
-    # Armazenamento
-    storage_backend: str = "s3"
+    # Armazenamento local
     storage_dir: str = "/app/storage"
     storage_total_gb: float = 200.0
 

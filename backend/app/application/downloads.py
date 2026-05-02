@@ -9,7 +9,7 @@ from asyncio.subprocess import DEVNULL, PIPE
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.repositories import DownloadJobRepository, VideoRepository, TelegramConfigRepository
 from app.infrastructure.telegram import connect, download_video
-from app.infrastructure.storage import upload, delete
+from app.infrastructure.storage import upload
 from app.domain.entities import DownloadStatus
 from app.config import settings
 
@@ -307,8 +307,8 @@ async def process_job(job_id: int, db_factory: Callable):
                 actual_size = optimized_path.stat().st_size if optimized_path.exists() else None
                 duration_seconds = await _probe_duration_seconds(optimized_path) if media_type == "video" else None
 
-                # 3. Upload to storage (S3 ou local)
-                logger.info(f"[job={job_id}] Uploading to storage...")
+                # 3. Move arquivo otimizado para o storage final
+                logger.info(f"[job={job_id}] Moving to storage...")
                 ext = (
                     getattr(video, "file_ext", None)
                     or optimized_path.suffix
@@ -317,12 +317,11 @@ async def process_job(job_id: int, db_factory: Callable):
                 if ext and not str(ext).startswith("."):
                     ext = f".{ext}"
                 prefix = "video" if media_type == "video" else "file"
-                s3_key = f"courses/{video.course_id}/modules/{video.module_name}/{prefix}_{video.id}{ext}"
-                s3_key = s3_key.replace(" ", "_")
-                
-                # Run S3 upload in executor since boto3 is sync
+                storage_key = f"courses/{video.course_id}/modules/{video.module_name}/{prefix}_{video.id}{ext}"
+                storage_key = storage_key.replace(" ", "_")
+
                 uploaded_key = await asyncio.get_event_loop().run_in_executor(
-                    None, upload, optimized_path, s3_key
+                    None, upload, optimized_path, storage_key
                 )
 
                 # 4. Update DB
@@ -333,22 +332,11 @@ async def process_job(job_id: int, db_factory: Callable):
                 await job_repo.set_done(job_id)
                 logger.info(f"[job={job_id}] Finished successfully.")
 
-                if (settings.storage_backend or "s3").lower() != "local":
+                if optimized_path != source_path and source_path.exists():
                     try:
-                        os.remove(str(optimized_path))
+                        os.remove(str(source_path))
                     except OSError:
                         pass
-                    if optimized_path != source_path:
-                        try:
-                            os.remove(str(source_path))
-                        except OSError:
-                            pass
-                else:
-                    if optimized_path != source_path and source_path.exists():
-                        try:
-                            os.remove(str(source_path))
-                        except OSError:
-                            pass
 
             except asyncio.CancelledError:
                 logger.info(f"[job={job_id}] Cancelado pelo usuário")

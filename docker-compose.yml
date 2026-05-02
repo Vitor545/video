@@ -24,20 +24,13 @@ services:
       DATABASE_URL: postgresql+asyncpg://devops:devops@db:5432/devops_platform
       SYNC_DATABASE_URL: postgresql+psycopg2://devops:devops@db:5432/devops_platform
       SECRET_KEY: super-secret-change-in-production
-      # SeaweedFS S3 externo (M3)
-      S3_ENDPOINT: ${S3_ENDPOINT}
-      S3_REGION: ${S3_REGION:-us-east-1}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      S3_BUCKET: ${S3_BUCKET:-private}
       # Telegram + IA (M2)
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       TELEGRAM_API_ID: ${TELEGRAM_API_ID}
       TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
       TELEGRAM_PHONE: ${TELEGRAM_PHONE}
       TELEGRAM_SESSION_PATH: /app/telegram_data/session
-      # Storage
-      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      # Storage local
       STORAGE_DIR: /app/storage
       STORAGE_TOTAL_GB: ${STORAGE_TOTAL_GB:-200}
       # Compressão de vídeo

@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Terminal, Eye, EyeOff } from "lucide-react"
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "@/contexts/auth"
 import { toast } from "sonner"
 
@@ -97,6 +97,11 @@ export default function Login() {
             {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          Não tem conta?{" "}
+          <Link to="/register" className="text-primary hover:underline">Criar conta</Link>
+        </p>
       </div>
     </div>
   )

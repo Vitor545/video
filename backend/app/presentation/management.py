@@ -8,13 +8,12 @@ Endpoints:
   POST   /management/integrations/{id}/sync    Inicia extração IA (background)
   POST   /management/integrations/sync-all     Sincroniza todas
   GET    /management/integrations/{id}/sync/status  Progresso da extração
-  GET    /management/system/health             Status: telegram, postgres, seaweed, storage
+  GET    /management/system/health             Status: postgres, storage
 """
 import asyncio
 import logging
 from datetime import datetime, UTC
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -273,10 +272,7 @@ async def telegram_verify_code(data: VerifyCodeIn, db: AsyncSession = Depends(ge
 
 @router.get("/system/health")
 async def system_health(db: AsyncSession = Depends(get_db)):
-    """
-    Verifica saúde dos componentes: postgres, seaweed, storage.
-    """
-    # Postgres
+    """Saúde do postgres + uso do storage local."""
     postgres_ok = False
     try:
         await db.execute(text("SELECT 1"))
@@ -284,19 +280,6 @@ async def system_health(db: AsyncSession = Depends(get_db)):
     except Exception:
         pass
 
-    # SeaweedFS — verifica via S3 endpoint (master não exposto externamente)
-    seaweed_ok = False
-    if (settings.storage_backend or "s3").lower() != "local":
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                resp = await client.get(settings.s3_endpoint, follow_redirects=True)
-                seaweed_ok = resp.status_code < 500
-        except Exception:
-            pass
-    else:
-        seaweed_ok = True
-
-    # Storage usado
     storage_used_gb = 0.0
     try:
         result = await db.execute(
@@ -309,7 +292,6 @@ async def system_health(db: AsyncSession = Depends(get_db)):
 
     return {
         "postgres": postgres_ok,
-        "seaweed": seaweed_ok,
         "storage_used_gb": storage_used_gb,
         "storage_total_gb": settings.storage_total_gb,
     }

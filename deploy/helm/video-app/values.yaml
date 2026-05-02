@@ -19,11 +19,10 @@ backend:
   telegramSession:
     storageClass: ""
     size: 1Gi
-  # Storage local opcional. Default usa S3 externo (SeaweedFS) — desligado.
+  # Storage local — PVC RWO montado em /app/storage (obrigatório).
   localStorage:
-    enabled: false
     storageClass: ""
-    size: 50Gi
+    size: 200Gi
 
 frontend:
   replicas: 2
@@ -56,15 +55,7 @@ config:
     user: devops
     password: devops
     name: devops_platform
-  storageBackend: s3
   storageTotalGb: "200"
-  s3:
-    endpoint: https://seaweedfs.vitorsouzadasilva.tech
-    region: us-east-1
-    bucket: private
-    accessKey: vitor
-    # secretKey: definido em --set ou em values-secret.yaml (NÃO commitar)
-    secretKey: ""
   openai:
     # apiKey: definido em --set ou em values-secret.yaml
     apiKey: ""
