@@ -1,0 +1,84 @@
+namespace: video
+
+image:
+  registry: docker.vitorsouzadasilva.tech
+  pullPolicy: Always
+  tag: latest
+  backend:
+    repository: vitorsouzadasilva/video-backend
+  frontend:
+    repository: vitorsouzadasilva/video-frontend
+
+backend:
+  # IMPORTANTE: o worker de downloads roda no lifespan do FastAPI (singleton).
+  # Manter replicas=1 evita processar o mesmo job em paralelo.
+  replicas: 1
+  resources:
+    requests: { cpu: "200m", memory: "512Mi" }
+    limits:   { cpu: "2000m", memory: "2Gi" }
+  telegramSession:
+    storageClass: ""
+    size: 1Gi
+  # Storage local opcional. Default usa S3 externo (SeaweedFS) — desligado.
+  localStorage:
+    enabled: false
+    storageClass: ""
+    size: 50Gi
+
+frontend:
+  replicas: 2
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "300m", memory: "256Mi" }
+
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  storage:
+    storageClass: ""
+    size: 10Gi
+  resources:
+    requests: { cpu: "100m", memory: "256Mi" }
+    limits:   { cpu: "1000m", memory: "1Gi" }
+
+ingress:
+  enabled: true
+  className: nginx
+  host: video.vitorsouzadasilva.tech
+  tls:
+    enabled: true
+    secretName: video-app-tls
+    clusterIssuer: cluster-issuer
+
+# Aplicação - DB, segredos, integrações
+config:
+  database:
+    user: devops
+    password: devops
+    name: devops_platform
+  storageBackend: s3
+  storageTotalGb: "200"
+  s3:
+    endpoint: https://seaweedfs.vitorsouzadasilva.tech
+    region: us-east-1
+    bucket: private
+    accessKey: vitor
+    # secretKey: definido em --set ou em values-secret.yaml (NÃO commitar)
+    secretKey: ""
+  openai:
+    # apiKey: definido em --set ou em values-secret.yaml
+    apiKey: ""
+  telegram:
+    apiId: ""
+    apiHash: ""
+    phone: ""
+  # SECRET_KEY do JWT - obrigatório trocar em produção
+  secretKey: "change-me-in-production"
+
+# Compressão de vídeo (ffmpeg)
+videoCompress:
+  enabled: true
+  codec: libx264
+  crf: "28"
+  preset: medium
+  audioBitrate: 96k

@@ -1,0 +1,66 @@
+# --- Segredos (NUNCA commitar) ---
+.env
+.env.*
+!.env.example
+deploy/helm/**/values-secret.yaml
+deploy/helm/**/values-secret.*.yaml
+*.pem
+*.key
+*.crt
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Dados runtime (volumes locais) ---
+backend/telegram_data/
+backend/storage/
+backend/temp_downloads/
+telegram_data/
+storage/
+temp_downloads/
+
+# --- Logs ---
+logs/
+*.log
+
+# --- IDE / Editor ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Helm ---
+deploy/helm/**/charts/
+deploy/helm/**/*.tgz
