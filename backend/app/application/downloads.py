@@ -15,8 +15,9 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Max concurrent downloads (compressão é CPU-bound, manter baixo evita travar a fila)
-MAX_CONCURRENT_DOWNLOADS = 2
+# Max concurrent downloads. Com preset=veryfast a compressão deixou de ser
+# o gargalo, então 4 jobs simultâneos é seguro.
+MAX_CONCURRENT_DOWNLOADS = 4
 _semaphore = asyncio.Semaphore(MAX_CONCURRENT_DOWNLOADS)
 _queue: asyncio.Queue[int] = asyncio.Queue()
 _active_downloads: dict[int, dict] = {}  # { job_id: { progress_bytes, total_bytes } }

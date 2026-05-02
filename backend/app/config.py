@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     video_compress_enabled: bool = True
     video_compress_codec: str = "libx264"
     video_compress_crf: int = 28
-    video_compress_preset: str = "medium"
+    video_compress_preset: str = "veryfast"
     video_audio_bitrate: str = "96k"
 
     class Config:
