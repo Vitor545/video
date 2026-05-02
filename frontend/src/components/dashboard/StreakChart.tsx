@@ -29,7 +29,8 @@ export function StreakChart({ courseId }: { courseId: number | null }) {
                   <ChartTooltipContent
                     hideLabel
                     formatter={(v, _, __, ___, data) => {
-                      const day = typeof data?.day === "string" ? data.day : ""
+                      const item = data as { day?: string } | undefined
+                      const day = typeof item?.day === "string" ? item.day : ""
                       const minutes = typeof v === "number" ? v : Number(v)
                       const value = Number.isFinite(minutes) ? `${minutes} min` : `${String(v)} min`
                       return (

@@ -47,7 +47,8 @@ export function ModuleRadialChart({ courseId }: { courseId: number | null }) {
                   content={
                     <ChartTooltipContent
                       formatter={(v, _, __, ___, data) => {
-                        const name = typeof data?.name === "string" ? data.name : ""
+                        const item = data as { name?: string } | undefined
+                        const name = typeof item?.name === "string" ? item.name : ""
                         const value = typeof v === "number" ? `${v}%` : `${String(v)}%`
                         return (
                           <div className="flex w-full min-w-56 items-center gap-3">

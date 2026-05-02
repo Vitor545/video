@@ -108,7 +108,7 @@ export function StatCards({
                 <span className="text-xs text-muted-foreground font-medium">{label}</span>
                 <div className="flex items-center gap-2">
                   {loading && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
-                  <Select value={courseValue} onValueChange={onCourseValueChange}>
+                  <Select value={courseValue} onValueChange={(v) => v != null && onCourseValueChange(v)}>
                     <SelectTrigger size="sm" className="w-full min-w-32 sm:w-44">
                       <SelectValue>
                         {courseId == null

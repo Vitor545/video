@@ -31,7 +31,8 @@ export function HourlyChart({ courseId }: { courseId: number | null }) {
                   <ChartTooltipContent
                     hideLabel
                     formatter={(v, _, __, ___, data) => {
-                      const hour = typeof data?.hour === "string" ? data.hour : ""
+                      const item = data as { hour?: string } | undefined
+                      const hour = typeof item?.hour === "string" ? item.hour : ""
                       const minutes = typeof v === "number" ? v : Number(v)
                       const value = Number.isFinite(minutes) ? `${minutes} min` : `${String(v)} min`
                       return (

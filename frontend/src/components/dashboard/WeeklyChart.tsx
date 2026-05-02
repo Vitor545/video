@@ -52,7 +52,8 @@ export function WeeklyChart({ courseId }: { courseId: number | null }) {
                   <ChartTooltipContent
                     hideLabel
                     formatter={(v, _, __, ___, data) => {
-                      const week = typeof data?.week === "string" ? data.week : ""
+                      const item = data as { week?: string } | undefined
+                      const week = typeof item?.week === "string" ? item.week : ""
                       return (
                         <div className="flex min-w-40 items-center gap-3">
                           <span className="text-muted-foreground">{week}</span>
